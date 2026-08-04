@@ -38,11 +38,11 @@ export interface UpdateCredentialsResponse {
 
 export interface ApiUser {
   id: number;
-  name: string;
-  email: string;
-  phone: string;
-  rut: string;
-  business_name: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  rut: string | null;
+  business_name: string | null;
   is_active: boolean;
   last_login: string | null;
   roles: string[];
@@ -98,25 +98,28 @@ export function transformApiUserToUser(apiUser: ApiUser): {
   business_name: string;
   phone: string;
 } {
+  // La API puede devolver estos campos en null (ej: cuentas sin correo registrado)
+  const email = apiUser.email ?? '';
+
   // Separar el nombre completo en nombre y apellido
-  const nameParts = apiUser.name.split(' ');
+  const nameParts = (apiUser.name ?? '').split(' ');
   const firstName = nameParts[0] || '';
   const lastName = nameParts.slice(1).join(' ') || '';
 
   // Obtener el primer rol como perfil, o 'Sin rol' si no hay roles
-  const profile = apiUser.roles && apiUser.roles.length > 0 
+  const profile = apiUser.roles && apiUser.roles.length > 0
     ? apiUser.roles[0].charAt(0).toUpperCase() + apiUser.roles[0].slice(1)
     : 'Sin rol';
 
   return {
     id: apiUser.id,
-    username: apiUser.email.split('@')[0], // Usar parte del email como username
+    username: email.split('@')[0], // Usar parte del email como username
     name: firstName,
     lastname: lastName,
-    email: apiUser.email,
+    email: email,
     profile: profile,
-    rut: apiUser.rut,
-    business_name: apiUser.business_name,
-    phone: apiUser.phone,
+    rut: apiUser.rut ?? '',
+    business_name: apiUser.business_name ?? '',
+    phone: apiUser.phone ?? '',
   };
 }
