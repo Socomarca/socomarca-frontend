@@ -148,6 +148,9 @@ const getSubcategoriesByCategory = (categoryId: number): Subcategory[] => {
   return SUBCATEGORIES.filter((sub) => subcategoryIds.includes(sub.id));
 };
 
+// Listas de precios simuladas: en QA un producto puede venir de cualquiera de ellas
+const PRICE_LISTS = ['Lista 1', 'Lista 2', 'Lista Mayorista'];
+
 const getUnitByCategory = (categoryId: number): string => {
   switch (categoryId) {
     case 1: // Alimentos Básicos
@@ -217,6 +220,7 @@ export const generateProduct = (id: number): Product => {
     price,
     stock,
     sku,
+    price_list_id: getRandomElement(PRICE_LISTS),
     image: `/assets/global/logo_plant.png`,
     category,
     subcategory,

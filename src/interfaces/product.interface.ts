@@ -4,6 +4,9 @@ export interface Product {
   price: number;
   stock: number;
   sku: string;
+  // Lista de precios a la que corresponde esta fila. Un mismo producto se repite
+  // una vez por cada lista permitida del usuario, y este campo las distingue.
+  price_list_id: string | null;
   image: string;
   category: Category | null;
   subcategory: Subcategory | null;

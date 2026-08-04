@@ -34,6 +34,7 @@ const normalizeProduct = (raw: any): Product => ({
   price: typeof raw.price === 'string' ? parseFloat(raw.price) || 0 : (raw.price ?? 0),
   stock: raw.stock ?? 0,
   sku: raw.sku ?? '',
+  price_list_id: raw.price_list_id ?? null,
   image: raw.image ?? '',
   unit: raw.unit ?? '',
   status: raw.status ?? false,
