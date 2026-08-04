@@ -61,11 +61,11 @@ const ClientsPage = () => {
   const transformApiUserToTableData = (apiUser: ApiUser): ClientTableData => {
     return {
       id: apiUser.id,
-      name: apiUser.name,
-      email: apiUser.email,
-      phone: apiUser.phone,
-      rut: apiUser.rut,
-      business_name: apiUser.business_name,
+      name: apiUser.name ?? '',
+      email: apiUser.email ?? '',
+      phone: apiUser.phone ?? '',
+      rut: apiUser.rut ?? '',
+      business_name: apiUser.business_name ?? '',
       is_active: apiUser.is_active ? 'Activo' : 'Inactivo',
       last_login: apiUser.last_login
         ? new Date(apiUser.last_login).toLocaleDateString('es-CL')
