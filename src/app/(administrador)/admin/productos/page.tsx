@@ -35,6 +35,11 @@ const columns = [
     label: 'Marca',
     render: (_: any, row: Product) => row.brand?.name,
   },
+  {
+    key: 'price_list_id',
+    label: 'Lista de precios',
+    render: (_: any, row: Product) => row.price_list_id || 'Sin lista',
+  },
 ];
 
 export default function ProductsAdmin() {
