@@ -482,13 +482,13 @@ export default function FinalizarCompraPage() {
               checked={aceptaTerminos}
               onChange={handleCheckboxChange}
             />
-            Todos los derechos reservados tankandtrailco.cl
+            Todos los derechos reservados appsocomarca.cl
             <br />
             Al comprar aceptas los{' '}
             <span onClick={handleOpenModal} className="text-lime-500 cursor-pointer">
               términos y condiciones
             </span>{' '}
-            de tankandtrailco.cl
+            de appsocomarca.cl
             {terminosError && (
               <p className="text-red-500 text-sm mt-1">{terminosError}</p>
             )}
