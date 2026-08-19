@@ -12,11 +12,6 @@ import Logo from './Logo';
 import useStore from '@/stores/base';
 import useAuthStore from '@/stores/useAuthStore';
 
-const masterCardImageUrl = '/assets/footer/mastercard.png';
-const americanExpressImageUrl = '/assets/footer/american-express.png';
-const paypalImageUrl = '/assets/footer/paypal.png';
-const visaImageUrl = '/assets/footer/visa.png';
-
 // Icon RRSS
 
 export default function Footer() {
@@ -199,28 +194,6 @@ export default function Footer() {
           © 2025 – Todos los derechos reservados.{' '}
           <span className="text-black font-semibold">socomarca.cl</span>
         </p>
-        <div className="flex-col md:flex-row items-center gap-2 mt-2 md:mt-0 opacity-50 hidden md:flex">
-          <img
-            src={masterCardImageUrl}
-            alt="MasterCard"
-            style={{ width: '37.8px', height: '23px' }}
-          />
-          <img
-            src={paypalImageUrl}
-            alt="PayPal"
-            style={{ width: '65.64px', height: '16px' }}
-          />
-          <img
-            src={visaImageUrl}
-            alt="Visa"
-            style={{ width: '38.47px', height: '12px' }}
-          />
-          <img
-            src={americanExpressImageUrl}
-            alt="American Express"
-            style={{ width: '39.59px', height: '12px' }}
-          />
-        </div>
       </div>
     </footer>
   );
