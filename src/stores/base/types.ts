@@ -292,6 +292,7 @@ export interface FiltersSlice {
   toggleFavoritesSection: () => void;
   togglePriceSection: () => void;
   applyFilters: () => Promise<void>;
+  scheduleApplyFilters: () => void;
   clearAllFilters: () => Promise<void>;
   resetFiltersState: () => void;
   hasActiveFilters: () => boolean;

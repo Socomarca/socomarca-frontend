@@ -156,7 +156,6 @@ export default function CategoryFilterMobile({
     togglePriceSection,
 
     // Acciones principales
-    applyFilters,
     clearAllFilters,
     hasActiveFilters,
   } = useStore();
@@ -227,12 +226,6 @@ export default function CategoryFilterMobile({
     },
     [setSelectedMaxPrice]
   );
-
-  const handleApplyFilters = () => {
-    console.log('Applying filters, showOnlyFavorites:', showOnlyFavorites);
-    applyFilters();
-    onClose();
-  };
 
   // Check if min and max are the same value
   const hasPriceRange = minPrice !== maxPrice && priceInitialized;
@@ -582,35 +575,18 @@ export default function CategoryFilterMobile({
             </div>
           </div>
 
-          {/* Footer with action buttons - Always visible */}
-          <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
-            <div className="flex flex-col gap-3">
+          {/* Los filtros se aplican solos al marcarlos; el modal se cierra con
+              la X o tocando el fondo. Acá solo queda limpiar, si hay filtros. */}
+          {hasActiveFilters() && (
+            <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
               <button
-                className="w-full bg-lime-500 text-white rounded-md py-4 px-6 text-center text-base font-medium hover:bg-lime-600 transition-all duration-300 cursor-pointer"
-                onClick={handleApplyFilters}
+                className="w-full bg-gray-200 text-gray-700 rounded-md py-3 px-6 text-center text-base font-medium hover:bg-gray-300 transition-all duration-300 cursor-pointer"
+                onClick={clearAllFilters}
               >
-                Aplicar Filtros
+                Limpiar Filtros
               </button>
-
-              {/* Clear filters button */}
-              <div
-                className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                  hasActiveFilters()
-                    ? 'max-h-16 opacity-100 transform translate-y-0'
-                    : 'max-h-0 opacity-0 transform -translate-y-2'
-                }`}
-              >
-                {hasActiveFilters() && (
-                  <button
-                    className="w-full bg-gray-200 text-gray-700 rounded-md py-3 px-6 text-center text-base font-medium hover:bg-gray-300 transition-all duration-300 cursor-pointer"
-                    onClick={clearAllFilters}
-                  >
-                    Limpiar Filtros
-                  </button>
-                )}
-              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>

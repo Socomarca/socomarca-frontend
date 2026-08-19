@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { FavoritesSlice, StoreState } from '../types';
+import { FavoritesSlice, FiltersSlice, StoreState } from '../types';
 import {
   fetchGetFavoriteLists,
   fetchCreateFavoriteList,
@@ -10,7 +10,7 @@ import {
 } from '@/services/actions/favorite.actions';
 
 export const createFavoritesSlice: StateCreator<
-  StoreState & FavoritesSlice,
+  StoreState & FavoritesSlice & FiltersSlice,
   [],
   [],
   FavoritesSlice
@@ -433,11 +433,13 @@ export const createFavoritesSlice: StateCreator<
 
   setShowOnlyFavorites: (show: boolean) => {
     set({ showOnlyFavorites: show });
+    get().scheduleApplyFilters();
   },
 
   toggleShowOnlyFavorites: () => {
     const { showOnlyFavorites } = get();
     set({ showOnlyFavorites: !showOnlyFavorites });
+    get().scheduleApplyFilters();
   },
   getFavoriteProductIds: () => {
     // Esta función se mantiene por compatibilidad pero no se usa en el filtro

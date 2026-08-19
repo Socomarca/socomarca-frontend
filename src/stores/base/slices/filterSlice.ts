@@ -146,6 +146,20 @@ export const addSelectedCategoryFilter = (
   }
 };
 
+// Los filtros se aplican solos al cambiar la selección, sin botón "Aplicar".
+// El slider de precio dispara un onChange por cada píxel arrastrado, así que
+// las llamadas se agrupan con un debounce en vez de pegarle al backend por cada
+// evento. El timer vive a nivel de módulo porque el store es un singleton.
+const AUTO_APPLY_DELAY_MS = 350;
+let autoApplyTimer: ReturnType<typeof setTimeout> | null = null;
+
+const cancelScheduledApply = () => {
+  if (autoApplyTimer) {
+    clearTimeout(autoApplyTimer);
+    autoApplyTimer = null;
+  }
+};
+
 export const createFiltersSlice: StateCreator<
   StoreState & FiltersSlice & ProductsSlice & FavoritesSlice & StoreSlice & CategoriesSlice,
   [],
@@ -184,6 +198,7 @@ export const createFiltersSlice: StateCreator<
     });
 
     set(getSelectionByLevel([...new Set(categoriesWithParents)], allCategories, searchCategories));
+    get().scheduleApplyFilters();
   },
 
   toggleCategorySelection: (categoryId) => {
@@ -196,6 +211,7 @@ export const createFiltersSlice: StateCreator<
       const nextSelectedCategories = selectedCategories.filter((id) => !idsToRemove.has(id));
 
       set(getSelectionByLevel(nextSelectedCategories, categories, searchCategories));
+      get().scheduleApplyFilters();
       return;
     }
 
@@ -207,10 +223,12 @@ export const createFiltersSlice: StateCreator<
     const nextSelectedCategories = [...new Set([...selectedCategories, ...idsToAdd])];
 
     set(getSelectionByLevel(nextSelectedCategories, categories, searchCategories));
+    get().scheduleApplyFilters();
   },
 
   setSelectedBrands: (brands) => {
     set({ selectedBrands: brands });
+    get().scheduleApplyFilters();
   },
 
   toggleBrandSelection: (brandId) => {
@@ -220,6 +238,7 @@ export const createFiltersSlice: StateCreator<
       : [...selectedBrands, brandId];
 
     set({ selectedBrands: newSelection });
+    get().scheduleApplyFilters();
   },
 
   setSelectedFavorites: (favorites) => {
@@ -250,14 +269,17 @@ export const createFiltersSlice: StateCreator<
       selectedMinPrice: selectedMin,
       selectedMaxPrice: selectedMax,
     });
+    get().scheduleApplyFilters();
   },
 
   setSelectedMinPrice: (price) => {
     set({ selectedMinPrice: price });
+    get().scheduleApplyFilters();
   },
 
   setSelectedMaxPrice: (price) => {
     set({ selectedMaxPrice: price });
+    get().scheduleApplyFilters();
   },
 
   handlePriceRangeChange: (lower, upper) => {
@@ -265,6 +287,7 @@ export const createFiltersSlice: StateCreator<
       selectedMinPrice: lower,
       selectedMaxPrice: upper,
     });
+    get().scheduleApplyFilters();
   },
 
   setMainCategoryOpen: (isOpen) => {
@@ -303,7 +326,20 @@ export const createFiltersSlice: StateCreator<
     set({ isPriceOpen: !isPriceOpen });
   },
 
+  // Agenda un applyFilters agrupando los cambios seguidos (checkboxes, slider)
+  // en una sola llamada al backend.
+  scheduleApplyFilters: () => {
+    cancelScheduledApply();
+
+    autoApplyTimer = setTimeout(() => {
+      autoApplyTimer = null;
+      get().applyFilters();
+    }, AUTO_APPLY_DELAY_MS);
+  },
+
   applyFilters: async () => {
+    cancelScheduledApply();
+
     const {
       selectedSupercategoryIds,
       selectedCategoryIds,
@@ -389,6 +425,10 @@ export const createFiltersSlice: StateCreator<
   },
 
   clearAllFilters: async () => {
+    // resetSearchRelatedStates ya recarga los productos: si quedara un apply
+    // agendado se dispararía una segunda petición con el mismo resultado.
+    cancelScheduledApply();
+
     const {
       // fetchProducts,
       // productPaginationMeta,
@@ -420,6 +460,8 @@ export const createFiltersSlice: StateCreator<
   },
 
   resetFiltersState: () => {
+    cancelScheduledApply();
+
     set({
       selectedCategories: [],
       selectedSupercategoryIds: [],
