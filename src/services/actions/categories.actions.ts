@@ -94,7 +94,7 @@ export const fetchGetAllCategories = async () => {
       };
     }
 
-    const response = await fetch(`${BACKEND_URL}/categories/all`, {
+    const response = await fetch(`${BACKEND_URL}/categories?structure=flat`, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
