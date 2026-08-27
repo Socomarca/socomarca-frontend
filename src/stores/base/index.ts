@@ -62,6 +62,7 @@ const initialState: StoreState = {
   categories: [],
   searchCategories: null,
   brands: [],
+  searchBrands: null,
 
   // UI states
   isMobile: false,

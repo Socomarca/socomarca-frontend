@@ -7,6 +7,7 @@ import {
 } from '@/stores/base/utils/passwordUtilities';
 import { createUserAction, CreateUserRequest } from '@/services/actions/user.actions';
 import { getRolesAction, Role } from '@/services/actions/roles.actions';
+import { ROLES_ASIGNABLES } from '@/configs/permisos';
 import { EyeSlashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -289,8 +290,10 @@ export default function CreateUser() {
       try {
         const result = await getRolesAction();
         if (result.success && result.data) {
-          // Filtrar el rol 'customer' de la lista de roles disponibles
-          const filteredRoles = result.data.filter(role => role.name !== 'customer');
+          // Mostrar solo los roles que el panel ofrece en esta etapa
+          const filteredRoles = result.data.filter(role =>
+            ROLES_ASIGNABLES.includes(role.name)
+          );
           setRoles(filteredRoles);
         } else {
           console.error('Error loading roles:', result.error);

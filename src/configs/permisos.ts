@@ -115,3 +115,15 @@ export const hasAllPermissions = (
     userPermissions.includes(permission)
   );
 };
+
+/**
+ * Roles que el panel ofrece al crear o editar un usuario.
+ *
+ * El backend define seis (superadmin, admin, supervisor, editor, customer,
+ * developer), pero en esta etapa solo se usan dos. Los demás siguen existiendo
+ * con todos sus permisos y los usuarios que ya los tengan no se ven afectados:
+ * acá solo se decide qué se muestra en los formularios.
+ *
+ * Para volver a ofrecer alguno, agregar su nombre a esta lista.
+ */
+export const ROLES_ASIGNABLES = ['superadmin', 'admin'];

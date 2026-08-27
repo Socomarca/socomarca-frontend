@@ -23,7 +23,7 @@ export const createStoreSlice: StateCreator<
 > = (set, get) => ({
   // Reset individual states
   resetBrandsState: () => {
-    set({ brands: [] });
+    set({ brands: [], searchBrands: null });
   },
 
   resetCategoriesState: () => {
@@ -76,6 +76,7 @@ export const createStoreSlice: StateCreator<
       selectedFavorites: [],
       isLoading: false,
       searchCategories: null,
+      searchBrands: null,
     });
 
     try {
