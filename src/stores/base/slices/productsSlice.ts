@@ -14,7 +14,10 @@ import {
 } from '@/services/actions/products.actions';
 import { filterAndRankProducts } from '../utils/searchUtils';
 import { FetchSearchProductsByFiltersProps } from '@/interfaces/product.interface';
-import { buildCategoryTreeFromSearchExtra } from './filterSlice';
+import {
+  buildBrandListFromSearchExtra,
+  buildCategoryTreeFromSearchExtra,
+} from './filterSlice';
 
 export const createProductsSlice: StateCreator<
   StoreState & ProductsSlice & FiltersSlice & CategoriesSlice,
@@ -115,11 +118,19 @@ export const createProductsSlice: StateCreator<
               get().categories
             ) ?? []
           : null;
+        const searchBrands = terms.value
+          ? buildBrandListFromSearchExtra(
+              response.data.extra,
+              get().brands,
+              get().selectedBrands
+            )
+          : null;
 
         set({
           searchTerm: terms.value || '',
           filteredProducts: products,
           searchCategories,
+          searchBrands,
           productPaginationMeta: response.data.meta,
           productPaginationLinks: response.data.links,
           currentPage: response.data.meta.current_page,

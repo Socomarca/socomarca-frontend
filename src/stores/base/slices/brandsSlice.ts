@@ -10,10 +10,15 @@ export const createBrandsSlice: StateCreator<
 > = (set) => ({
   // Estado inicial
   brands: [],
+  searchBrands: null,
 
   // Acciones
   setBrands: (brands) => {
     set({ brands });
+  },
+
+  setSearchBrands: (brands) => {
+    set({ searchBrands: brands });
   },
 
   fetchBrands: async () => {
