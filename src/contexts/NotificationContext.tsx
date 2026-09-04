@@ -52,49 +52,71 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
 
   useEffect(() => {
-    // Verificar si estamos en el cliente y si Firebase Messaging es soportado
-    if (typeof window !== 'undefined') {
-      // Detectar si estamos en Capacitor iOS
-      const Capacitor = (window as any).Capacitor;
-      const isCapacitorIOS = Capacitor && Capacitor.getPlatform() === 'ios';
-      
-      // Solo deshabilitar Firebase Messaging en iOS (no soporta Service Workers)
-      // Android y web pueden usar FCM normalmente
-      if (!isCapacitorIOS) {
-        setIsSupported(true);
-        
-        // Importar Firebase Messaging dinámicamente solo cuando no estamos en iOS
-        import('firebase/messaging').then(({ getMessaging, onMessage }) => {
-          try {
-            const _messaging = getMessaging(app);
-            setMessaging(_messaging);
-
-            // Configurar listener para mensajes cuando la app está abierta
-            const unsubscribe = onMessage(_messaging, (payload) => {
-              const notification = {
-                title: payload.notification?.title || 'Nueva notificación',
-                body: payload.notification?.body || '',
-                icon: payload.notification?.icon || '/assets/global/logo.png'
-              };
-
-              // Las notificaciones FCM van a realtimeNotifications
-              setRealtimeNotifications(prev => [notification, ...prev]);
-            });
-
-            return () => unsubscribe();
-          } catch (error) {
-            console.log('Firebase Messaging no soportado:', error);
-            setIsSupported(false);
-          }
-        }).catch((error) => {
-          console.log('Error cargando Firebase Messaging:', error);
-          setIsSupported(false);
-        });
-      } else {
-        console.log('iOS detectado - Firebase Messaging deshabilitado (usar @capacitor/push-notifications)');
-        setIsSupported(false);
-      }
+    if (typeof window === 'undefined') {
+      return;
     }
+
+    // iOS bajo Capacitor no soporta Service Workers, así que ahí no hay FCM web.
+    const Capacitor = (window as any).Capacitor;
+    const isCapacitorIOS = Capacitor && Capacitor.getPlatform() === 'ios';
+
+    if (isCapacitorIOS) {
+      console.log('iOS detectado - Firebase Messaging deshabilitado (usar @capacitor/push-notifications)');
+      setIsSupported(false);
+      return;
+    }
+
+    setIsSupported(true);
+
+    // El unsubscribe se guarda acá y no se devuelve desde el .then(): lo que el
+    // efecto retorna es lo único que React ejecuta al desmontar. Devolverlo desde
+    // dentro de la promesa dejaba el listener vivo para siempre, y con
+    // reactStrictMode cada montaje sumaba uno más, de modo que un mismo push se
+    // procesaba tantas veces como listeners hubiera acumulados.
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+
+    import('firebase/messaging')
+      .then(({ getMessaging, onMessage }) => {
+        if (cancelled) {
+          return;
+        }
+
+        try {
+          const _messaging = getMessaging(app);
+          setMessaging(_messaging);
+
+          unsubscribe = onMessage(_messaging, (payload) => {
+            // El backend manda el id de fcm_notification_histories en el data del
+            // push. Sin él no hay forma de saber que esta notificación y la que
+            // llega después por el histórico son la misma.
+            const rawId = payload.data?.notification_id;
+            const id = rawId === undefined ? undefined : Number(rawId);
+
+            const notification: NotificationPayload = {
+              id: Number.isInteger(id) && (id as number) > 0 ? id : undefined,
+              viewed: false,
+              title: payload.notification?.title || payload.data?.title || 'Nueva notificación',
+              body: payload.notification?.body || payload.data?.body || '',
+              icon: payload.notification?.icon || '/assets/global/logo.png',
+            };
+
+            setRealtimeNotifications(prev => [notification, ...prev]);
+          });
+        } catch (error) {
+          console.log('Firebase Messaging no soportado:', error);
+          setIsSupported(false);
+        }
+      })
+      .catch((error) => {
+        console.log('Error cargando Firebase Messaging:', error);
+        setIsSupported(false);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
   const loadHistoricalNotifications = useCallback(async () => {
@@ -111,8 +133,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       
       if (result.ok && result.data) {
         // Convertir las notificaciones del backend al formato del contexto
+        // Se conservan también las ya vistas: el badge se apaga con el flag `viewed`,
+        // no borrando la notificación. Descartarlas acá era lo que impedía volver a
+        // abrir la campana y ver las anteriores.
         const formattedNotifications: NotificationPayload[] = result.data
-          .filter(notification => !notification.viewed)
           .map(notification => ({
             id: notification.id,
             title: notification.title,
@@ -151,19 +175,41 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     return () => window.clearInterval(intervalId);
   }, [loadHistoricalNotifications]);
 
-  // Combinar notificaciones históricas y en tiempo real para el dropdown
+  // Combinar notificaciones históricas y en tiempo real para el dropdown.
+  //
+  // Un push que llega con la app abierta entra por realtime, y el polling del
+  // histórico lo trae de nuevo unos segundos después: son la misma notificación por
+  // dos caminos. Se descarta la repetida por id, quedándose con la de tiempo real
+  // porque es la que llegó primero y conserva el orden.
+  //
+  // Las que no traen id (un backend viejo que todavía no lo manda, o addTestNotification)
+  // se dejan pasar: sin id no hay forma de compararlas y es preferible mostrar de más
+  // que esconder una notificación real.
   useEffect(() => {
-    console.log('🔔 Combinando notificaciones:', {
-      realtimeCount: realtimeNotifications.length,
-      historicalCount: historicalNotifications.length,
-      realtime: realtimeNotifications,
-      historical: historicalNotifications
-    });
-    setDropdownNotifications([...realtimeNotifications, ...historicalNotifications]);
+    const seenIds = new Set<number>();
+
+    const combined = [...realtimeNotifications, ...historicalNotifications].filter(
+      (notification) => {
+        const id = Number(notification.id);
+
+        if (!Number.isInteger(id) || id <= 0) {
+          return true;
+        }
+
+        if (seenIds.has(id)) {
+          return false;
+        }
+
+        seenIds.add(id);
+        return true;
+      }
+    );
+
+    setDropdownNotifications(combined);
   }, [realtimeNotifications, historicalNotifications]);
 
   // Función para enviar token al servidor
-  const sendTokenToServer = async (fcmToken: string) => {
+  const sendTokenToServer = useCallback(async (fcmToken: string) => {
     try {
       setTokenError(null);
       const result = await sendFCMToken(fcmToken);
@@ -179,9 +225,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       setTokenError(error instanceof Error ? error.message : 'Error inesperado');
       console.error('Error inesperado enviando token FCM:', error);
     }
-  };
+  }, []);
 
-  const requestPermission = async (): Promise<string | null> => {
+  // Memoizada: NotificationWrapper la tiene en las dependencias de su efecto, y sin
+  // esto cambiaba de identidad en cada render del provider (uno por cada tick del
+  // polling), repitiendo la petición del token FCM una y otra vez.
+  const requestPermission = useCallback(async (): Promise<string | null> => {
     if (!messaging || !isSupported) {
       return null;
     }
@@ -209,7 +258,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       setTokenError(error instanceof Error ? error.message : 'Error obteniendo token FCM');
       return null;
     }
-  };
+  }, [messaging, isSupported, sendTokenToServer]);
 
   const clearNotifications = () => {
     setNotifications([]);
@@ -219,10 +268,15 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setRealtimeNotifications([]);
   };
 
+  // Marca como vistas las pendientes, sin quitarlas de la lista: lo único que cambia
+  // es el flag, que es lo que apaga el badge. Así siguen disponibles al volver a abrir.
   const markHistoricalNotificationsAsViewed = useCallback(async () => {
-    const notificationIds = historicalNotifications
+    const pendingIds = [...realtimeNotifications, ...historicalNotifications]
+      .filter(notification => !notification.viewed)
       .map(notification => Number(notification.id))
       .filter(id => Number.isInteger(id) && id > 0);
+
+    const notificationIds = [...new Set(pendingIds)];
 
     if (notificationIds.length === 0) {
       return;
@@ -232,14 +286,22 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
     if (result.ok) {
       const idsSet = new Set(notificationIds);
-      setHistoricalNotifications(prev =>
-        prev.filter(notification => !idsSet.has(Number(notification.id)))
-      );
+      const markViewed = (list: NotificationPayload[]) =>
+        list.map(notification =>
+          idsSet.has(Number(notification.id))
+            ? { ...notification, viewed: true }
+            : notification
+        );
+
+      setHistoricalNotifications(markViewed);
+      // La copia que llegó por push tiene que quedar en el mismo estado, o al
+      // recombinarse volvería a contar como no leída.
+      setRealtimeNotifications(markViewed);
       return;
     }
 
     console.error('🔔 No se pudieron marcar notificaciones como vistas:', result.error);
-  }, [historicalNotifications]);
+  }, [historicalNotifications, realtimeNotifications]);
 
   // Función para agregar notificación de prueba
   const addTestNotification = () => {
@@ -255,8 +317,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
 
 
-  // Contador de notificaciones no leídas (solo dropdown)
-  const unreadCount = dropdownNotifications.length;
+  // Contador de no leídas. Antes era el largo de la lista, así que el badge solo
+  // se apagaba si las notificaciones desaparecían.
+  const unreadCount = dropdownNotifications.filter(
+    notification => !notification.viewed
+  ).length;
 
   const value: NotificationContextType = {
     token,

@@ -13,7 +13,6 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
   const { 
     dropdownNotifications, 
     unreadCount, 
-    clearDropdownNotifications, 
     markHistoricalNotificationsAsViewed,
     token, 
     tokenSentToServer, 
@@ -24,6 +23,8 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const hasNotifications = dropdownNotifications.length > 0;
+  // El badge depende de las no leídas; la lista se muestra igual aunque estén todas vistas.
+  const hasUnread = unreadCount > 0;
 
 
 
@@ -90,8 +91,10 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
       <button
         ref={buttonRef}
         onClick={handleToggleDropdown}
-        className="relative text-gray-600 hover:text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        aria-label={`Notificaciones${hasNotifications ? ` (${unreadCount} nuevas)` : ''}`}
+        // focus-visible en vez de focus: el anillo aparece al navegar con teclado,
+        // no al hacer click con el mouse, que era lo que dibujaba el recuadro.
+        className="relative text-gray-600 hover:text-gray-800 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:ring-offset-2"
+        aria-label={`Notificaciones${hasUnread ? ` (${unreadCount} nuevas)` : ''}`}
       >
         {/* Icono de campana */}
         <svg
@@ -110,9 +113,9 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
         </svg>
 
         {/* Badge de contador */}
-        {hasNotifications && (
+        {hasUnread && (
           <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-            {dropdownNotifications.length > 99 ? '99+' : dropdownNotifications.length}
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
@@ -134,11 +137,12 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
                   </span>
                 )}
               </h3>
-              {hasNotifications && (
+              {hasUnread && (
                 <button
                   onClick={async () => {
+                    // Ya no se llama a clearDropdownNotifications(): vaciaba las de
+                    // tiempo real, y ahora alcanza con marcarlas como vistas.
                     await markHistoricalNotificationsAsViewed();
-                    clearDropdownNotifications();
                     setIsOpen(false);
                   }}
                   className="text-xs text-blue-600 hover:text-blue-800 font-medium"
@@ -172,25 +176,14 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
             ) : (
               dropdownNotifications.map((notification, index) => (
                 <div
-                  key={index}
-                  className="px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150"
+                  // El id identifica la notificación de forma estable; el índice solo
+                  // se usa como último recurso para las que no lo traen.
+                  key={notification.id ?? `sin-id-${index}`}
+                  className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 ${
+                    notification.viewed ? 'opacity-60' : 'bg-lime-50/60'
+                  }`}
                 >
                   <div className="flex items-start space-x-3">
-                    {/* Icono de notificación */}
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
-                      <svg
-                        className="w-4 h-4 text-blue-600"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-
                     {/* Contenido */}
                     <div className="flex-1 min-w-0">
                       {notification.title && (
@@ -208,10 +201,12 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
                       </p>
                     </div>
 
-                    {/* Indicador de nueva notificación */}
-                    <div className="flex-shrink-0">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    </div>
+                    {/* Indicador de nueva: solo mientras no se haya leído */}
+                    {!notification.viewed && (
+                      <div className="flex-shrink-0 mt-1.5">
+                        <div className="w-2 h-2 bg-lime-500 rounded-full"></div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
