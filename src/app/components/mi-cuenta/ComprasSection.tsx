@@ -14,8 +14,9 @@ export interface ProductoCompra {
   nombre: string;
   marca: string;
   imagen: string;
-  precio: number;
+  precio: number; // Precio unitario neto
   cantidad: number;
+  total: number; // Total de la línea con IVA
 }
 
 // Representa una compra completa realizada por el usuario
@@ -24,7 +25,11 @@ export interface Compra {
   numero: string; // ID de la compra
   referencia: string | null; // IDMAEEDO
   hora: string; // Hora en que se registró
-  total: number; // Monto total de la compra
+  subtotal: number; // Suma neta de los productos
+  iva: number; // Tasa de IVA aplicada, como porcentaje (0 en órdenes antiguas)
+  montoIva: number; // Monto de IVA de la orden
+  envio: number; // Costo de despacho
+  total: number; // Monto efectivamente cobrado (productos + IVA + despacho)
   estado: string; // Estado de la compra (pending, processing, completed, etc.)
   productos: ProductoCompra[]; // Lista de productos comprados
   sucursal: Sucursal;

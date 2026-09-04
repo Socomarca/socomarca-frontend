@@ -1,7 +1,10 @@
 export interface Product {
   id: number;
   name: string;
+  // Precio de venta. Trae IVA incluido cuando la petición pidió `vat=true`;
+  // `vat` dice qué tasa quedó contenida en él (0 si el precio es neto).
   price: number;
+  vat: number;
   stock: number;
   sku: string;
   // Lista de precios a la que corresponde esta fila. Un mismo producto se repite
@@ -33,6 +36,15 @@ export interface Brand {
 
 export interface ProductToBuy extends Product {
   quantity: number;
+}
+
+/**
+ * Bloque `vat` que acompaña a las respuestas de productos: dice si los precios
+ * vienen con IVA y con qué tasa (porcentaje, 19 significa 19%).
+ */
+export interface VatInfo {
+  included: boolean;
+  rate: number;
 }
 
 export interface ProductCart {
@@ -84,6 +96,8 @@ export interface FetchSearchProductsByFiltersProps {
   subcategory_id?: number[];
   brand_id?: number[];
   is_favorite?: boolean;
+  /** Pide los precios con IVA incluido; el rango min/max también se lee con IVA. */
+  vat?: boolean;
 }
 
 export interface SearchWithPaginationProps
@@ -121,6 +135,7 @@ export interface ProductSearchResponse {
     }>;
   };
   filters?: BackendFilters;
+  vat?: VatInfo;
 }
 
 /**

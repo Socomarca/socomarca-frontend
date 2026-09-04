@@ -71,14 +71,19 @@ export default function DetalleCompra({
                   <p className="font-semibold">{p.nombre}</p>
                   <p className="text-lime-500 font-bold">
                     ${p.precio.toLocaleString("es-CL")}
+                    <span className="text-xs font-normal text-gray-500">
+                      {" "}
+                      c/u neto
+                    </span>
                   </p>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-500">Cant: {p.cantidad}</p>
                 <p className="font-semibold text-gray-800">
-                  ${p.precio.toLocaleString("es-CL")}
+                  ${p.total.toLocaleString("es-CL")}
                 </p>
+                <p className="text-xs text-gray-500">IVA incl.</p>
               </div>
             </div>
           ))}
@@ -93,20 +98,32 @@ export default function DetalleCompra({
         <div className="bg-white p-6 rounded shadow h-fit">
           <h3 className="text-lg font-bold mb-4">Resumen de compra</h3>
           <div className="flex justify-between mb-2">
-            <span className="text-sm">Subtotal</span>
+            <span className="text-sm">Subtotal (neto)</span>
             <span className="text-sm">
-              ${pedido.total.toLocaleString("es-CL")}
+              ${pedido.subtotal.toLocaleString("es-CL")}
             </span>
           </div>
 
-          <div className="flex justify-between font-semibold border-t pt-2 mb-2">
-            <span>Total todo medio de pago</span>
-            <span>${pedido.total.toLocaleString("es-CL")}</span>
+          <div className="flex justify-between mb-2">
+            <span className="text-sm">IVA ({pedido.iva}%)</span>
+            <span className="text-sm">
+              ${pedido.montoIva.toLocaleString("es-CL")}
+            </span>
           </div>
 
-          <p className="text-xs text-gray-500 mb-4">
-            Impuestos y envíos calculados al finalizar la compra
-          </p>
+          <div className="flex justify-between mb-2">
+            <span className="text-sm">Costos de envío</span>
+            <span className="text-sm">
+              {pedido.envio > 0
+                ? `$${pedido.envio.toLocaleString("es-CL")}`
+                : "Gratis"}
+            </span>
+          </div>
+
+          <div className="flex justify-between font-semibold border-t pt-2 mb-4">
+            <span>Total pagado</span>
+            <span>${pedido.total.toLocaleString("es-CL")}</span>
+          </div>
           <button
             onClick={async () => {
               const result = await addOrderToCart(Number(pedido.numero));

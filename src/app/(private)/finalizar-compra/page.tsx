@@ -14,6 +14,7 @@ import { logCreditoRaw } from '@/app/components/mi-cuenta/LineaCreditoSection';
 import useAuthStore from '@/stores/useAuthStore';
 import { fetchBranches } from '@/services/actions/branches.actions';
 import type { Branch } from '@/interfaces/branch.interface';
+import { buildVatBreakdown } from '@/utils/vat';
 
 type PaymentMethodCode = string;
 
@@ -26,6 +27,8 @@ const FIXED_SHIPPING_COST = Number.isFinite(configuredShippingCost) ? configured
 export default function FinalizarCompraPage() {
   const router = useRouter();
   const cartProducts = useStore((state) => state.cartProducts);
+  const vatRate = useStore((state) => state.vatRate);
+  const fetchVatRate = useStore((state) => state.fetchVatRate);
   const [loadingUser, setLoadingUser] = useState(true);
   const { openModal } = useStore();
   const { user } = useAuthStore();
@@ -95,9 +98,18 @@ export default function FinalizarCompraPage() {
   };
 
   const totalQuantity = cartProducts.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cartProducts.reduce((sum, item) => sum + item.quantity * item.price, 0);
-  const shipping = subtotal >= FREE_SHIPPING_MINIMUM ? 0 : FIXED_SHIPPING_COST;
-  const total = subtotal + shipping;
+  // Los precios del carrito llegan netos; el IVA se calcula acá con la tasa
+  // vigente para que el resumen coincida con la orden que devuelve el backend.
+  const netSubtotal = cartProducts.reduce(
+    (sum, item) => sum + item.quantity * item.price,
+    0
+  );
+  const shipping = netSubtotal >= FREE_SHIPPING_MINIMUM ? 0 : FIXED_SHIPPING_COST;
+  const {
+    subtotal,
+    vatAmount,
+    amount: total,
+  } = buildVatBreakdown(netSubtotal, vatRate, shipping);
 
   const handleOpenModal = () => {
     openModal('', {
@@ -162,6 +174,12 @@ export default function FinalizarCompraPage() {
       setCreditoLoading(false);
     });
   }, [user?.id]);
+
+  // El checkout puede abrirse sin pasar por el catálogo, que es quien deja la
+  // tasa en el store.
+  useEffect(() => {
+    fetchVatRate();
+  }, [fetchVatRate]);
 
   useEffect(() => {
     fetchPaymentMethods().then((methods) => {
@@ -363,8 +381,12 @@ export default function FinalizarCompraPage() {
             <span className="text-black"></span>
           </div>
           <div className="flex justify-between border-t-slate-200 border-t py-5">
-            <span className="font-bold">Subtotal</span>
+            <span className="font-bold">Subtotal (neto)</span>
             <span className="font-bold">{formatCLP(subtotal)}</span>
+          </div>
+          <div className="flex justify-between mb-5">
+            <span>IVA ({vatRate}%)</span>
+            <span>{formatCLP(vatAmount)}</span>
           </div>
           <div className="flex justify-between mb-5">
             <span>Costos de envío</span>

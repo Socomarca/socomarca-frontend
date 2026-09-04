@@ -22,6 +22,9 @@ export default function CarroDeCompraPage() {
     cartProducts,
     paginationData,
     subtotal,
+    vatRate,
+    vatAmount,
+    total,
     isCartEmpty,
     isCartLoading,
     
@@ -97,6 +100,9 @@ export default function CarroDeCompraPage() {
             {/* Resumen de compra */}
             <OrderSummary
               subtotal={subtotal}
+              vatRate={vatRate}
+              vatAmount={vatAmount}
+              total={total}
               cartCount={cartProducts.length}
               onContinue={goNext}
               isLoading={isCartLoading}

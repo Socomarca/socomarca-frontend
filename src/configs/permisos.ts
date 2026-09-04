@@ -43,6 +43,12 @@ export const PERMISOS = {
     UPDATE_FAQ: 'update-faq',
   },
   
+  // Permisos para la configuración de contenido (IVA, etc.)
+  CONTENT_SETTINGS: {
+    READ: 'read-content-settings',
+    UPDATE: 'update-content-settings',
+  },
+  
   // Permisos para notificaciones
   NOTIFICATIONS: {
     CREATE: 'create-notification',

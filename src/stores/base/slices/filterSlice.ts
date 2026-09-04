@@ -6,6 +6,7 @@ import {
   FavoritesSlice,
   StoreSlice,
   CategoriesSlice,
+  VatSlice,
 } from '../types';
 import {
   Product,
@@ -189,7 +190,13 @@ const cancelScheduledApply = () => {
 };
 
 export const createFiltersSlice: StateCreator<
-  StoreState & FiltersSlice & ProductsSlice & FavoritesSlice & StoreSlice & CategoriesSlice,
+  StoreState &
+    FiltersSlice &
+    ProductsSlice &
+    FavoritesSlice &
+    StoreSlice &
+    CategoriesSlice &
+    VatSlice,
   [],
   [],
   FiltersSlice
@@ -387,8 +394,11 @@ export const createFiltersSlice: StateCreator<
       const searchParams: SearchWithPaginationProps = {
         page: 1,
         size: productPaginationMeta?.per_page || 9,
+        // El rango viene del slider, que ya trabaja con precios con IVA: el
+        // backend lo traduce a neto al recibir `vat: true`.
         min: selectedMinPrice,
         max: selectedMaxPrice,
+        vat: true,
       };
 
       // Mantener el término de búsqueda si existe
@@ -426,6 +436,7 @@ export const createFiltersSlice: StateCreator<
       const response = await fetchSearchProductsByFilters(searchParams);
 
       if (response.ok && response.data) {
+        get().setVatRate(response.data.vat?.rate);
         const searchCategories = searchTerm
           ? buildCategoryTreeFromSearchExtra(
               response.data.extra,

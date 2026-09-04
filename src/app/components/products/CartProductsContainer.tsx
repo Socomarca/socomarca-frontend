@@ -4,11 +4,18 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import CartProductCard from './CartProductCard';
 import useStore from '@/stores/base';
+import { addVat } from '@/utils/vat';
 
 export default function CartProductsContainer() {
   const [totalPrice, setTotalPrice] = useState('');
   const [totalItems, setTotalItems] = useState(0);
-  const { cartProducts } = useStore();
+  const { cartProducts, vatRate, fetchVatRate } = useStore();
+
+  // La tasa se necesita para mostrar el estimado con IVA aunque el mini carro
+  // se abra antes de que cargue el catálogo.
+  useEffect(() => {
+    fetchVatRate();
+  }, [fetchVatRate]);
 
   //aqui va el useEffect para obtener los productos del carro
 
@@ -22,13 +29,13 @@ export default function CartProductsContainer() {
     }, 0);
 
     setTotalPrice(
-      total.toLocaleString('es-CL', {
+      addVat(total, vatRate).toLocaleString('es-CL', {
         style: 'currency',
         currency: 'CLP',
       })
     );
     setTotalItems(itemCount);
-  }, [cartProducts]);
+  }, [cartProducts, vatRate]);
 
   return (
     <>
@@ -60,7 +67,7 @@ export default function CartProductsContainer() {
               <span className="text-sm font-bold">{totalPrice}</span>
             </div>
             <span className="text-xs text-slate-500">
-              Impuestos y envíos calculados al finalizar la compra
+              IVA incluido. Envíos calculados al finalizar la compra
             </span>
           </div>
           <div className="w-full p-3">
