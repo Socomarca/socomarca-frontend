@@ -7,6 +7,7 @@ import {
   ProductImage, 
   ProductInfo 
 } from '@/app/components/atoms';
+import { addVat } from '@/utils/vat';
 
 interface Props {
   product: CartItem;
@@ -17,6 +18,7 @@ export default function CartProductCard({ product, index }: Props) {
   const {
     addProductToCartOptimistic,
     removeProductFromCartOptimistic,
+    vatRate,
   } = useStore();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -67,13 +69,14 @@ export default function CartProductCard({ product, index }: Props) {
     setIsLoading(false);
   };
   
-  const totalPrice = (product.price * product.quantity).toLocaleString(
-    'es-CL',
-    {
-      style: 'currency',
-      currency: 'CLP',
-    }
-  );
+  // El carrito llega neto desde la API; se muestra con IVA como el catálogo.
+  const totalPrice = addVat(
+    product.price * product.quantity,
+    vatRate
+  ).toLocaleString('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+  });
 
   return (
     <div
@@ -94,7 +97,7 @@ export default function CartProductCard({ product, index }: Props) {
       <ProductInfo
         brand={product.brand}
         name={product.name}
-        price={product.price}
+        price={addVat(product.price, vatRate)}
         unit={product.unit}
         variant="cart"
         truncateLength={{ brand: 10, name: 10 }}

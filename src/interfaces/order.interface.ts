@@ -59,8 +59,16 @@ export interface OrderItem {
   product: Product;
   unit: string;
   quantity: number;
+  /** Precio unitario neto */
   price: string;
+  /** Neto de la línea (price x quantity) */
   subtotal: number;
+  /** Tasa de IVA aplicada a la línea, como porcentaje */
+  vat: string;
+  /** Monto de IVA de la línea */
+  vat_amount: string;
+  /** Total de la línea con IVA */
+  total: string;
   created_at: string;
   updated_at: string;
 }
@@ -69,7 +77,20 @@ export interface Order {
   id: number;
   random_document_number: string | null;
   user: UserData;
+  /** Suma neta de los productos */
   subtotal: number;
+  /**
+   * Tasa de IVA con la que se cobró la orden, como porcentaje. Las órdenes
+   * anteriores a la incorporación del IVA traen 0 y `total` igual a `subtotal`.
+   */
+  vat: string;
+  /** Monto de IVA de la orden */
+  vat_amount: string;
+  /** Subtotal + IVA, sin despacho */
+  total: string;
+  /** Costo de despacho */
+  shipping_cost: string;
+  /** Total efectivamente cobrado (total + despacho) */
   amount: number;
   status: string;
   order_items: OrderItem[];

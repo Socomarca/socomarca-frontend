@@ -1,9 +1,10 @@
 /**
  * Custom hook para manejar la lógica de la página del carrito de compras
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import useStore from '@/stores/base';
+import { buildVatBreakdown } from '@/utils/vat';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -15,6 +16,8 @@ export const useCartPage = () => {
     decrementProductInCart,
     incrementProductInCart,
     isCartLoading,
+    vatRate,
+    fetchVatRate,
   } = useStore();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,10 +55,22 @@ export const useCartPage = () => {
     return { meta, links, paginatedProducts };
   }, [cartProducts, currentPage]);
 
-  /** Subtotal calculado */
-  const subtotal = useMemo(() => {
-    return cartProducts?.reduce((acc, p) => acc + (p.price * p.quantity), 0) || 0;
-  }, [cartProducts]);
+  // El carrito puede abrirse sin pasar por el catálogo, que es quien deja la
+  // tasa en el store.
+  useEffect(() => {
+    fetchVatRate();
+  }, [fetchVatRate]);
+
+  /**
+   * Desglose del carrito. `GET /cart` devuelve precios netos, así que el IVA se
+   * calcula acá con la tasa vigente para que coincida con la orden final.
+   */
+  const totals = useMemo(() => {
+    const net =
+      cartProducts?.reduce((acc, p) => acc + p.price * p.quantity, 0) || 0;
+
+    return buildVatBreakdown(net, vatRate);
+  }, [cartProducts, vatRate]);
 
   /** Navegación al inicio */
   const backHome = useCallback(() => {
@@ -111,7 +126,10 @@ export const useCartPage = () => {
     // Datos calculados
     cartProducts: cartProducts || [],
     paginationData,
-    subtotal,
+    subtotal: totals.subtotal,
+    vatRate: totals.rate,
+    vatAmount: totals.vatAmount,
+    total: totals.total,
     isCartEmpty,
     isCartLoading,
     

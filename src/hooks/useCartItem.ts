@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CartItem } from '@/interfaces/product.interface';
 import useStore from '@/stores/base';
 import { CART_CONFIG, ERROR_MESSAGES } from '@/app/components/carro-de-compra/constants';
+import { addVat } from '@/utils/vat';
 
 interface UseCartItemReturn {
   isLoading: boolean;
@@ -16,7 +17,7 @@ interface UseCartItemReturn {
 }
 
 export const useCartItem = (product: CartItem): UseCartItemReturn => {
-  const { addProductToCart, removeProductFromCart } = useStore();
+  const { addProductToCart, removeProductFromCart, vatRate } = useStore();
   
   const [isLoading, setIsLoading] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState(`url(${product.image})`);
@@ -85,12 +86,16 @@ export const useCartItem = (product: CartItem): UseCartItemReturn => {
     }
   }, [isLoading, product, removeProductFromCart, handleError]);
 
-  // Cálculos memorizados
+  // Cálculos memorizados. `GET /cart` entrega precios netos y el catálogo los
+  // muestra con IVA, así que la línea se muestra con IVA para que coincidan.
   const totalPrice = useMemo(() =>
-    (product.price * product.quantity).toLocaleString(CART_CONFIG.LOCALE, {
-      style: 'currency',
-      currency: CART_CONFIG.CURRENCY,
-    }), [product.price, product.quantity]
+    addVat(product.price * product.quantity, vatRate).toLocaleString(
+      CART_CONFIG.LOCALE,
+      {
+        style: 'currency',
+        currency: CART_CONFIG.CURRENCY,
+      }
+    ), [product.price, product.quantity, vatRate]
   );
 
   return {

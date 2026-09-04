@@ -6,6 +6,7 @@ import {
   StoreState,
   FiltersSlice,
   CategoriesSlice,
+  VatSlice,
 } from '../types';
 import {
   fetchGetProducts,
@@ -20,7 +21,7 @@ import {
 } from './filterSlice';
 
 export const createProductsSlice: StateCreator<
-  StoreState & ProductsSlice & FiltersSlice & CategoriesSlice,
+  StoreState & ProductsSlice & FiltersSlice & CategoriesSlice & VatSlice,
   [],
   [],
   ProductsSlice
@@ -106,12 +107,15 @@ export const createProductsSlice: StateCreator<
         ...terms,
         page: terms.page || 1,
         size: terms.size || 9,
+        // El cliente ve precios con IVA incluido
+        vat: true,
       };
 
       const response = await fetchSearchProductsByFilters(searchParams);
 
       if (response.ok && response.data) {
         const products = response.data.data;
+        get().setVatRate(response.data.vat?.rate);
         const searchCategories = terms.value
           ? buildCategoryTreeFromSearchExtra(
               response.data.extra,
@@ -147,10 +151,13 @@ export const createProductsSlice: StateCreator<
   },
 
   fetchMinMaxPrice: async () => {
-    const { setAvailablePriceRange } = get();
-    const response = await fetchMinMaxPrice();
+    const { setAvailablePriceRange, setVatRate } = get();
+    // Los extremos se piden con IVA para que el slider hable la misma moneda
+    // que los precios del catálogo.
+    const response = await fetchMinMaxPrice(true);
     if (response.ok && response.data) {
-      const { min_price, max_price } = response.data;
+      const { min_price, max_price, vat } = response.data;
+      setVatRate(vat);
       setAvailablePriceRange(min_price, max_price);
     }
   },
@@ -159,11 +166,12 @@ export const createProductsSlice: StateCreator<
     try {
       set({ isLoadingProducts: true });
 
-      const response = await fetchGetProducts({ page, size });
+      const response = await fetchGetProducts({ page, size, vat: true });
       await get().fetchMinMaxPrice(); // Establecer los valores extremos del endpoint
 
       if (response.ok && response.data) {
         const products = response.data.data;
+        get().setVatRate(response.data.vat?.rate);
         set({
           products: products,
           filteredProducts: products,

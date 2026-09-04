@@ -127,7 +127,7 @@ export const CartTable = ({ products }: CartTableProps) => (
               Cantidad
             </th>
             <th className="p-4 text-center font-semibold text-black">
-              Precio
+              Precio (IVA incl.)
             </th>
           </tr>
         </thead>
@@ -168,43 +168,65 @@ export const CartMobileList = ({
 );
 
 interface OrderSummaryProps {
+  /** Suma neta de los productos */
   subtotal: number;
+  /** Tasa de IVA vigente, como porcentaje */
+  vatRate: number;
+  /** IVA calculado sobre el subtotal */
+  vatAmount: number;
+  /** Subtotal + IVA, sin despacho */
+  total: number;
   cartCount: number;
   onContinue: () => void;
   isLoading?: boolean;
 }
 
-export const OrderSummary = ({ subtotal, cartCount, onContinue, isLoading = false }: OrderSummaryProps) => (
+/** Monto del resumen, con su placeholder mientras se recalcula el carro. */
+const SummaryAmount = ({
+  amount,
+  isLoading,
+}: {
+  amount: number;
+  isLoading: boolean;
+}) =>
+  isLoading ? (
+    <div className="flex items-center gap-2">
+      <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-lime-500"></div>
+      <span className="text-gray-400">Calculando...</span>
+    </div>
+  ) : (
+    <span>${amount.toLocaleString(CART_PAGE_CONFIG.CURRENCY_LOCALE)}</span>
+  );
+
+export const OrderSummary = ({
+  subtotal,
+  vatRate,
+  vatAmount,
+  total,
+  cartCount,
+  onContinue,
+  isLoading = false,
+}: OrderSummaryProps) => (
   <aside className="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 h-fit">
     <div className="border-b-[1px] border-b-slate-100 pb-2 mb-3">
       <h3 className="text-xl font-bold border-b-slate-50">
         Resumen de compra
       </h3>
     </div>
+    <div className="flex justify-between mb-2">
+      <span>Subtotal (neto)</span>
+      <SummaryAmount amount={subtotal} isLoading={isLoading} />
+    </div>
     <div className="flex justify-between mb-2 pb-3 border-b-[1px] border-b-slate-100">
-      <span>Subtotal</span>
-      {isLoading ? (
-        <div className="flex items-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-lime-500"></div>
-          <span className="text-gray-400">Calculando...</span>
-        </div>
-      ) : (
-        <span>${subtotal.toLocaleString(CART_PAGE_CONFIG.CURRENCY_LOCALE)}</span>
-      )}
+      <span>IVA ({vatRate}%)</span>
+      <SummaryAmount amount={vatAmount} isLoading={isLoading} />
     </div>
     <div className="flex justify-between font-bold mb-2">
       <span>Total todo medio de pago</span>
-      {isLoading ? (
-        <div className="flex items-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-lime-500"></div>
-          <span className="text-gray-400">Calculando...</span>
-        </div>
-      ) : (
-        <span>${subtotal.toLocaleString(CART_PAGE_CONFIG.CURRENCY_LOCALE)}</span>
-      )}
+      <SummaryAmount amount={total} isLoading={isLoading} />
     </div>
     <p className="text-xs text-gray-500 mb-4">
-      Impuestos y envíos calculados al finalizar la compra
+      Envíos calculados al finalizar la compra
     </p>
 
     <button

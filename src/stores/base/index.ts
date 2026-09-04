@@ -7,6 +7,7 @@ import { Store, StoreState } from './types';
 import { createAuthSlice } from './slices/authSlice';
 import { createCartSlice } from './slices/cartSlice';
 import { createProductsSlice } from './slices/productsSlice';
+import { createVatSlice } from './slices/vatSlice';
 import { createCategoriesSlice } from './slices/categoriesSlice';
 import { createUiSlice } from './slices/uiSlice';
 import { createPaginationSlice } from './slices/paginationSlice';
@@ -57,6 +58,10 @@ const initialState: StoreState = {
   productPaginationMeta: null,
   productPaginationLinks: null,
   currentPage: 1,
+
+  // VAT states
+  vatRate: 0,
+  vatRateInitialized: false,
 
   // Category & Brand states
   categories: [],
@@ -173,6 +178,7 @@ const useStore = create<Store>()((...a) => ({
   ...initialState,
   ...createAuthSlice(...a),
   ...createProductsSlice(...a),
+  ...createVatSlice(...a),
   ...createCategoriesSlice(...a),
   ...createBrandsSlice(...a),
   ...createUiSlice(...a),

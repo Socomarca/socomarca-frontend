@@ -2,6 +2,8 @@ import { ProductToBuy } from '@/interfaces/product.interface';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { DEFAULT_IMAGE } from '@/utils/assets';
+import useStore from '@/stores/base';
+import { addVat } from '@/utils/vat';
 
 interface Props {
   p: ProductToBuy;
@@ -16,6 +18,7 @@ export default function CarroCompraCardMobile({
   incrementProductInCart,
   setIdProductoAEliminar,
 }: Props) {
+  const vatRate = useStore((state) => state.vatRate);
   const [backgroundImage, setBackgroundImage] = useState(`url(${p.image})`);
   useEffect(() => {
     const img = new Image();
@@ -64,7 +67,7 @@ export default function CarroCompraCardMobile({
         <p className="text-xs text-slate-400">{p.brand?.name}</p>
         <p data-cy="cart-item-name" className="text-sm font-semibold text-black">{p.name}</p>
         <p data-cy="cart-item-price" className="text-sm font-bold text-gray-700 mt-1">
-          ${(p.price * p.quantity).toLocaleString('es-CL')}
+          ${addVat(p.price * p.quantity, vatRate).toLocaleString('es-CL')}
         </p>
 
         <div className="flex items-center gap-2 mt-2">
