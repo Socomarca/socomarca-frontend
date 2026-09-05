@@ -20,6 +20,7 @@ import {
 import { useState, useEffect, useCallback } from 'react';
 import { getUsersAction, searchUsersAction, updateUserAction, deleteUserAction, UpdateUserRequest } from '@/services/actions/user.actions';
 import { getRolesAction, Role } from '@/services/actions/roles.actions';
+import { ROLES_ASIGNABLES } from '@/configs/permisos';
 import { transformApiUserToUser, ApiMeta, SearchUsersRequest } from '@/interfaces/user.interface';
 
 export interface User {
@@ -399,7 +400,8 @@ const EditUserForm = ({
       try {
         const result = await getRolesAction();
         if (result.success && result.data) {
-          setRoles(result.data);
+          // Mostrar solo los roles que el panel ofrece en esta etapa
+          setRoles(result.data.filter(role => ROLES_ASIGNABLES.includes(role.name)));
         } else {
           console.error('Error loading roles:', result.error);
         }

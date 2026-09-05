@@ -156,6 +156,17 @@ export interface ProductsSlice {
   fetchMinMaxPrice: () => Promise<void>;
 }
 
+// VAT Slice
+export interface VatSlice {
+  /** Tasa de IVA vigente como porcentaje (19 significa 19%). */
+  vatRate: number;
+  /** Indica si ya se leyó la tasa desde el backend. */
+  vatRateInitialized: boolean;
+
+  setVatRate: (rate: number) => void;
+  fetchVatRate: () => Promise<void>;
+}
+
 // Categories Slice
 export interface CategoriesSlice {
   categories: CategoryComplexData[];
@@ -169,8 +180,10 @@ export interface CategoriesSlice {
 // Brands Slice
 export interface BrandsSlice {
   brands: Brand[];
+  searchBrands: Brand[] | null;
 
   setBrands: (brands: Brand[]) => void;
+  setSearchBrands: (brands: Brand[] | null) => void;
   fetchBrands: () => Promise<void>;
 }
 
@@ -342,9 +355,13 @@ export interface StoreState extends LoadingStates, AuthState {
   productPaginationLinks: PaginationLinks | null;
   currentPage: number;
 
+  vatRate: number;
+  vatRateInitialized: boolean;
+
   categories: CategoryComplexData[];
   searchCategories: CategoryComplexData[] | null;
   brands: Brand[];
+  searchBrands: Brand[] | null;
 
   isMobile: boolean;
   isTablet: boolean;
@@ -476,6 +493,7 @@ export interface TopMunicipalitiesResponse {
 export type Store = StoreState &
   AuthSlice &
   ProductsSlice &
+  VatSlice &
   CategoriesSlice &
   BrandsSlice &
   FiltersSlice &

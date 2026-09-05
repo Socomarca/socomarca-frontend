@@ -32,6 +32,8 @@ const normalizeProduct = (raw: any): Product => ({
   id: raw.id,
   name: raw.name ?? '',
   price: typeof raw.price === 'string' ? parseFloat(raw.price) || 0 : (raw.price ?? 0),
+  // Tasa de IVA contenida en `price`. Es 0 cuando se pidieron precios netos.
+  vat: typeof raw.vat === 'string' ? parseFloat(raw.vat) || 0 : (raw.vat ?? 0),
   stock: raw.stock ?? 0,
   sku: raw.sku ?? '',
   price_list_id: raw.price_list_id ?? null,
@@ -136,11 +138,14 @@ const getCachedProducts = (): Product[] => {
  * @returns API-like response with product data
  */
 export const fetchGetProducts = async ({
-  page ,
-  size ,
+  page,
+  size,
+  vat = false,
 }: {
   page: number;
   size: number;
+  /** Pide los precios con IVA incluido (catálogo del cliente). */
+  vat?: boolean;
 }) => {
   try {
     if (IS_QA_MODE) {
@@ -171,7 +176,9 @@ export const fetchGetProducts = async ({
       }
 
       const response = await fetch(
-        `${BACKEND_URL}/products/?page=${page}&size=${size}`,
+        `${BACKEND_URL}/products/?page=${page}&size=${size}${
+          vat ? '&vat=true' : ''
+        }`,
         {
           method: 'GET',
           headers: {
@@ -402,6 +409,9 @@ export const fetchSearchProductsByFilters = async (
 
       // Construir el body con la nueva estructura
       const requestBody: any = {
+        // Con `vat: true` los precios de la respuesta vienen con IVA incluido y
+        // el rango de `filters.price` se interpreta con IVA.
+        ...(filters.vat ? { vat: true } : {}),
         filters: {
           // Price siempre va sin excepción
           price: {
@@ -581,9 +591,11 @@ export const fetchSearchProducts = async (
 
 /**
  * Fetches the minimum and maximum product prices (mock or real API).
- * @returns Object with min_price and max_price
+ * @param vat - Pide los extremos con IVA incluido, para que el slider de precio
+ *              hable la misma moneda que los precios del catálogo.
+ * @returns Object with min_price, max_price and the VAT rate contained in them
  */
-export const fetchMinMaxPrice = async () => {
+export const fetchMinMaxPrice = async (vat: boolean = false) => {
   try {
     if (IS_QA_MODE) {
       // Simular delay de red
@@ -597,6 +609,7 @@ export const fetchMinMaxPrice = async () => {
           data: {
             min_price: 0,
             max_price: 1000,
+            vat: 0,
           },
           error: null,
         };
@@ -618,6 +631,7 @@ export const fetchMinMaxPrice = async () => {
         data: {
           min_price,
           max_price,
+          vat: 0,
         },
         error: null,
       };
@@ -634,13 +648,16 @@ export const fetchMinMaxPrice = async () => {
       };
     }
 
-    const response = await fetch(`${BACKEND_URL}/products/price-extremes`, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${cookie}`,
-      },
-    });
+    const response = await fetch(
+      `${BACKEND_URL}/products/price-extremes${vat ? '?vat=true' : ''}`,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${cookie}`,
+        },
+      }
+    );
     if (!response.ok) {
       throw new Error(`Error HTTP: ${response.status}`);
     }
@@ -650,6 +667,7 @@ export const fetchMinMaxPrice = async () => {
       data: {
         min_price: data.lowest_price_product,
         max_price: data.highest_price_product,
+        vat: Number(data.vat) || 0,
       },
       error: null,
     };
@@ -661,6 +679,25 @@ export const fetchMinMaxPrice = async () => {
       error: error instanceof Error ? error.message : 'Error desconocido',
     };
   }
+};
+
+/**
+ * Reads the VAT rate the backend is applying to the prices the customer sees.
+ *
+ * Se apoya en `price-extremes?vat=true` porque es el endpoint más liviano que
+ * devuelve la tasa y lo puede consultar cualquier usuario autenticado; el de
+ * `/settings/vat` exige permisos de administración.
+ *
+ * @returns La tasa como porcentaje (19 significa 19%), o null si no se pudo leer
+ */
+export const fetchVatRate = async (): Promise<number | null> => {
+  const response = await fetchMinMaxPrice(true);
+
+  if (!response.ok || !response.data) {
+    return null;
+  }
+
+  return response.data.vat;
 };
 
 /**

@@ -6,11 +6,13 @@ import {
   FavoritesSlice,
   StoreSlice,
   CategoriesSlice,
+  VatSlice,
 } from '../types';
 import {
   Product,
   SearchWithPaginationProps,
 } from '@/interfaces/product.interface';
+import { Brand } from '@/interfaces/brand.interface';
 import { CategoryComplexData } from '@/interfaces/category.interface';
 import { fetchSearchProductsByFilters } from '@/services/actions/products.actions';
 
@@ -127,6 +129,33 @@ export const buildCategoryTreeFromSearchExtra = (
   });
 };
 
+// El backend devuelve en `extra.brands` las marcas que tienen al menos un producto
+// dentro de los resultados de la búsqueda, para que el sidebar ofrezca solo esas.
+// Devuelve null si el backend no manda la clave (modo QA o versión antigua): en ese
+// caso el sidebar sigue mostrando el catálogo completo de marcas.
+export const buildBrandListFromSearchExtra = (
+  extra: any,
+  allBrands: Brand[],
+  selectedBrands: number[]
+): Brand[] | null => {
+  const matchingBrands = extra?.brands;
+
+  if (!Array.isArray(matchingBrands)) {
+    return null;
+  }
+
+  // Una marca ya marcada debe seguir visible aunque la búsqueda no la devuelva,
+  // o el usuario se queda sin forma de desmarcarla.
+  const matchingIds = new Set<number>(matchingBrands.map((brand: Brand) => brand.id));
+  const selectedOutsideSearch = allBrands.filter(
+    (brand) => selectedBrands.includes(brand.id) && !matchingIds.has(brand.id)
+  );
+
+  return [...matchingBrands, ...selectedOutsideSearch].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+};
+
 export const addSelectedCategoryFilter = (
   searchParams: SearchWithPaginationProps,
   selectedSupercategoryIds: number[],
@@ -161,7 +190,13 @@ const cancelScheduledApply = () => {
 };
 
 export const createFiltersSlice: StateCreator<
-  StoreState & FiltersSlice & ProductsSlice & FavoritesSlice & StoreSlice & CategoriesSlice,
+  StoreState &
+    FiltersSlice &
+    ProductsSlice &
+    FavoritesSlice &
+    StoreSlice &
+    CategoriesSlice &
+    VatSlice,
   [],
   [],
   FiltersSlice
@@ -359,8 +394,11 @@ export const createFiltersSlice: StateCreator<
       const searchParams: SearchWithPaginationProps = {
         page: 1,
         size: productPaginationMeta?.per_page || 9,
+        // El rango viene del slider, que ya trabaja con precios con IVA: el
+        // backend lo traduce a neto al recibir `vat: true`.
         min: selectedMinPrice,
         max: selectedMaxPrice,
+        vat: true,
       };
 
       // Mantener el término de búsqueda si existe
@@ -398,16 +436,25 @@ export const createFiltersSlice: StateCreator<
       const response = await fetchSearchProductsByFilters(searchParams);
 
       if (response.ok && response.data) {
+        get().setVatRate(response.data.vat?.rate);
         const searchCategories = searchTerm
           ? buildCategoryTreeFromSearchExtra(
               response.data.extra,
               get().categories
             ) ?? []
           : null;
+        const searchBrands = searchTerm
+          ? buildBrandListFromSearchExtra(
+              response.data.extra,
+              get().brands,
+              selectedBrands
+            )
+          : null;
 
         set({
           filteredProducts: response.data.data,
           searchCategories,
+          searchBrands,
           productPaginationMeta: response.data.meta,
           productPaginationLinks: response.data.links,
           currentPage: response.data.meta.current_page,
@@ -449,6 +496,7 @@ export const createFiltersSlice: StateCreator<
       selectedMaxPrice: maxPrice,
       isFiltered: false,
       searchCategories: null,
+      searchBrands: null,
     });
 
     try {
@@ -482,6 +530,7 @@ export const createFiltersSlice: StateCreator<
       isPriceOpen: true,
       isFiltered: false,
       searchCategories: null,
+      searchBrands: null,
     });
   },
 

@@ -7,7 +7,13 @@ export const useCartProducts = () => useStore((state) => state.cartProducts);
 // Hook para obtener el estado de carga del carrito
 export const useCartLoading = () => useStore((state) => state.isCartLoading);
 
-// Hook para obtener información calculada del carrito
+/**
+ * Información calculada del carrito.
+ *
+ * `totalPrice` es la suma **neta**: `GET /cart` no trae desglose de IVA. Para
+ * mostrarlo al cliente hay que sumarle el IVA con la tasa del store (`vatRate`)
+ * usando los helpers de `@/utils/vat`.
+ */
 export const useCartInfo = () =>
   useStore((state) => {
     const cartProducts = state.cartProducts;

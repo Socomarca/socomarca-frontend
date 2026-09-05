@@ -12,6 +12,7 @@ import {
   createSuccessResponse,
   createErrorResponse,
 } from '../utils/storeUtils';
+import { removeVat } from '@/utils/vat';
 
 const errorHandler = createErrorHandler('Cart');
 
@@ -74,11 +75,17 @@ export const createCartSlice: StateCreator<
             : item
         );
       } else {
-        // Si es un producto nuevo, agregarlo al carrito
+        // Si es un producto nuevo, agregarlo al carrito. El catálogo entrega
+        // precios con IVA y `GET /cart` los devuelve netos: se guarda el neto
+        // para que el ítem optimista no quede con IVA duplicado cuando la
+        // vista le vuelva a sumar la tasa.
+        const netPrice = removeVat(product.price, product.vat);
         const newCartItem = {
           ...product,
+          price: netPrice,
+          vat: 0,
           quantity,
-          subtotal: product.price * quantity,
+          subtotal: netPrice * quantity,
           unit,
         };
         updatedCart = [...cartProducts, newCartItem];

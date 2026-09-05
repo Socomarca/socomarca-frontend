@@ -124,6 +124,7 @@ export default function CategoryFilterMobile({
     categories,
     searchCategories,
     brands,
+    searchBrands,
 
     // Estados de filtros
     selectedCategories,
@@ -188,8 +189,10 @@ export default function CategoryFilterMobile({
   const filteredCategories = activeCategories.filter((category) =>
     categoryMatchesTerm(category, categorySearchTerm)
   );
+  // Con una búsqueda activa solo se ofrecen las marcas presentes en los resultados
+  const activeBrands = searchBrands ?? brands;
   // Filtrar marcas por término de búsqueda
-  const filteredBrands = brands.filter((brand) =>
+  const filteredBrands = activeBrands.filter((brand) =>
     brand.name.toLowerCase().includes(brandSearchTerm.toLowerCase())
   );
 

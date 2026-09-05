@@ -95,6 +95,11 @@ export const getSidebarConfig = (
       url: '/admin/preguntas-frecuentes',
     },
     {
+      id: 'iva',
+      label: 'IVA',
+      url: '/admin/iva',
+    },
+    {
       id: 'mensaje-cliente',
       label: 'Mensaje para el cliente',
       url: '/admin/mensaje-cliente',

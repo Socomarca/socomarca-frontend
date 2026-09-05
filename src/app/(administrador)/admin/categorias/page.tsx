@@ -1,7 +1,7 @@
 'use client'
 
 import CustomTable from "@/app/components/admin/CustomTable";
-import { fetchGetCategories } from "@/services/actions/categories.actions";
+import { fetchGetAllCategories } from "@/services/actions/categories.actions";
 import { fetchExportCategories } from "@/services/actions/exports.actions";
 import { useEffect, useState } from "react";
 import { CategoryComponent } from "@/interfaces/category.interface";
@@ -14,13 +14,64 @@ import { formatDate } from "@/utils/formatCurrency";
 
 const PAGE_SIZE = 20;
 
+// La tabla lista los tres niveles juntos, así que agruparlos es lo que la hace
+// legible: primero las supercategorías, luego las categorías, luego las
+// subcategorías, alfabéticas dentro de cada grupo.
+const DEFAULT_SORT: SortOption = { key: "level", label: "Nivel", direction: "asc" };
+
 const columns = [
   { key: "id", label: "ID" },
   { key: "name", label: "Nombre" },
   { key: "code", label: "Código" },
+  { key: "level", label: "Nivel", render: (_: any, row: CategoryComponent) => row.level ?? '-' },
   { key: "products_count", label: "Productos", render: (_: any, row: CategoryComponent) => row.products_count || 0 },
   { key: "created_at", label: "Fecha Creación", render: (_: any, row: CategoryComponent) => row.created_at ? formatDate(row.created_at) : '-' },
 ];
+
+// Función para filtrar y ordenar datos localmente
+const filterAndSortData = (categories: CategoryComponent[], search: string, sort: SortOption | null) => {
+  let filteredData = [...categories];
+
+  // Aplicar filtro de búsqueda
+  if (search) {
+    filteredData = filteredData.filter(category =>
+      category.name.toLowerCase().includes(search.toLowerCase()) ||
+      category.code?.toLowerCase().includes(search.toLowerCase())
+    );
+  }
+
+  // Aplicar ordenamiento
+  if (sort) {
+    const factor = sort.direction === 'asc' ? 1 : -1;
+
+    filteredData.sort((a, b) => {
+      // El nivel tiene pocos valores distintos, así que sin desempate por
+      // nombre las filas de un mismo nivel quedarían en orden arbitrario.
+      if (sort.key === 'level') {
+        const levelDiff = (a.level ?? 0) - (b.level ?? 0);
+        return factor * (levelDiff || a.name.localeCompare(b.name));
+      }
+
+      let aValue: number;
+      let bValue: number;
+
+      switch (sort.key) {
+        case 'created_at':
+          aValue = a.created_at ? new Date(a.created_at).getTime() : 0;
+          bValue = b.created_at ? new Date(b.created_at).getTime() : 0;
+          break;
+        case 'id':
+        default:
+          aValue = a.id;
+          bValue = b.id;
+      }
+
+      return factor * (aValue - bValue);
+    });
+  }
+
+  return filteredData;
+};
 
 export default function CategoriesAdmin() {
   const [data, setData] = useState<CategoryComponent[]>([]);
@@ -31,7 +82,7 @@ export default function CategoriesAdmin() {
   const [downloadLoading, setDownloadLoading] = useState(false);
 
   // Estado para el ordenamiento
-  const [sortOption, setSortOption] = useState<SortOption | null>({ key: "id", label: "ID", direction: "asc" });
+  const [sortOption, setSortOption] = useState<SortOption | null>(DEFAULT_SORT);
 
   // Estado para el término de búsqueda
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,12 +90,12 @@ export default function CategoriesAdmin() {
   // Cargar datos iniciales
   useEffect(() => {
     setInitialLoading(true);
-    fetchGetCategories().then((res) => {
+    fetchGetAllCategories().then((res) => {
       if (res.ok && res.data) {
         // Asegurar que sea un array
-        const categoriesData = Array.isArray(res.data) ? res.data : res.data.data || [];
-        setData(categoriesData as CategoryComponent[]);
-        setOriginalData(categoriesData as CategoryComponent[]);
+        const categoriesData = (Array.isArray(res.data) ? res.data : res.data.data || []) as CategoryComponent[];
+        setData(filterAndSortData(categoriesData, "", DEFAULT_SORT));
+        setOriginalData(categoriesData);
         
         // Crear meta de paginación simulada para los datos mock
         const totalItems = categoriesData.length;
@@ -67,51 +118,9 @@ export default function CategoriesAdmin() {
   // Opciones de columnas para ordenar
   const sortColumns = [
     { key: "id", label: "ID" },
+    { key: "level", label: "Nivel" },
     { key: "created_at", label: "Fecha Creación" },
   ];
-
-  // Función para filtrar y ordenar datos localmente
-  const filterAndSortData = (categories: CategoryComponent[], search: string, sort: SortOption | null) => {
-    let filteredData = [...categories];
-
-    // Aplicar filtro de búsqueda
-    if (search) {
-      filteredData = filteredData.filter(category =>
-        category.name.toLowerCase().includes(search.toLowerCase()) ||
-        category.code?.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
-    // Aplicar ordenamiento
-    if (sort) {
-      filteredData.sort((a, b) => {
-        let aValue: any;
-        let bValue: any;
-
-        switch (sort.key) {
-          case 'id':
-            aValue = a.id;
-            bValue = b.id;
-            break;
-          case 'created_at':
-            aValue = a.created_at ? new Date(a.created_at).getTime() : 0;
-            bValue = b.created_at ? new Date(b.created_at).getTime() : 0;
-            break;
-          default:
-            aValue = a.id;
-            bValue = b.id;
-        }
-
-        if (sort.direction === 'asc') {
-          return aValue > bValue ? 1 : -1;
-        } else {
-          return aValue < bValue ? 1 : -1;
-        }
-      });
-    }
-
-    return filteredData;
-  };
 
   // Manejar cambio de orden
   const handleSortChange = (option: SortOption | null) => {
@@ -172,7 +181,7 @@ export default function CategoriesAdmin() {
   // Limpiar búsqueda
   const handleClearSearch = async () => {
     setSearchTerm("");
-    const defaultSort = { key: "id", label: "ID", direction: "asc" as const };
+    const defaultSort = DEFAULT_SORT;
     setSortOption(defaultSort);
     setLoading(true);
     

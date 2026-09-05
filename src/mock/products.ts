@@ -218,6 +218,7 @@ export const generateProduct = (id: number): Product => {
       unit === 'unidad' ? ' unidades' : unit
     }`,
     price,
+    vat: 0,
     stock,
     sku,
     price_list_id: getRandomElement(PRICE_LISTS),
